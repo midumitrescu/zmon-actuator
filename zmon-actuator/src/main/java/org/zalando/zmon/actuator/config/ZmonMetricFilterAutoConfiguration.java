@@ -16,9 +16,12 @@
 package org.zalando.zmon.actuator.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
 import org.zalando.zmon.actuator.ZmonMetricsFilter;
+import org.zalando.zmon.actuator.metrics.MetricsWrapper;
 
 import com.codahale.metrics.MetricRegistry;
 
@@ -33,7 +36,12 @@ public class ZmonMetricFilterAutoConfiguration {
 
     @Bean
     public ZmonMetricsFilter zmonMetricsFilter() {
-        return new ZmonMetricsFilter(metricRegistry);
+        return new ZmonMetricsFilter(metricsWrapper());
+    }
+
+    @Bean
+    public MetricsWrapper metricsWrapper() {
+        return new MetricsWrapper(metricRegistry);
     }
 
 }

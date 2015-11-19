@@ -17,12 +17,16 @@ package org.zalando.zmon.actuator.backend;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.IOException;
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.delete;
+import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 
 import org.junit.runner.RunWith;
@@ -39,17 +43,19 @@ import org.springframework.boot.test.WebIntegrationTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import org.springframework.http.client.ClientHttpResponse;
+import org.springframework.http.HttpStatus;
 
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
-import org.springframework.web.client.ResponseErrorHandler;
 import org.springframework.web.client.RestTemplate;
 
 import org.zalando.zmon.actuator.ExampleApplication;
 
 import com.codahale.metrics.ConsoleReporter;
 import com.codahale.metrics.MetricRegistry;
+
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.junit.WireMockRule;
 
 /**
  * @author  jbellmann
@@ -59,6 +65,7 @@ import com.codahale.metrics.MetricRegistry;
 @WebIntegrationTest(randomPort = true, value = {"debug=false"})
 public class ZmonRestBackendMetricsTest {
 
+    public static final int REPEATS = 100;
     private final Logger logger = LoggerFactory.getLogger(ZmonRestBackendMetricsTest.class);
 
     @Value("${local.server.port}")
@@ -67,55 +74,51 @@ public class ZmonRestBackendMetricsTest {
     @Autowired
     private MetricRegistry metricRegistry;
 
-    private RestTemplate restTemplate;
+    private RestTemplate externalClient = new RestTemplate();
 
     private final Random random = new Random(System.currentTimeMillis());
+
+    @Rule
+    public final WireMockRule wireMockRule = new WireMockRule(9999);
 
     @Before
     public void setUp() {
         ConsoleReporter reporter = ConsoleReporter.forRegistry(metricRegistry).convertRatesTo(TimeUnit.SECONDS)
                                                   .convertDurationsTo(TimeUnit.MILLISECONDS).build();
         reporter.start(2, TimeUnit.SECONDS);
-
-        restTemplate = new RestTemplate();
-        restTemplate.setErrorHandler(new ResponseErrorHandler() {
-
-                @Override
-                public boolean hasError(final ClientHttpResponse response) throws IOException {
-
-                    // we want them all to pass
-                    return false;
-                }
-
-                @Override
-                public void handleError(final ClientHttpResponse response) throws IOException { }
-            });
-
+        expectDeleteCall();
     }
 
     @Test
     public void test() throws InterruptedException {
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < REPEATS; i++) {
 
-            restTemplate.getForObject("http://localhost:" + port + "/hello", String.class);
-            TimeUnit.MILLISECONDS.sleep(random.nextInt(500));
+            externalClient.getForObject("http://localhost:" + port + "/timeConsumingCall", String.class);
+            TimeUnit.MILLISECONDS.sleep(random.nextInt(30));
         }
 
-        assertThat(metricRegistry.getTimers().get("zmon.response.200.GET.hello")).isNotNull();
-        assertThat(metricRegistry.getTimers().get("zmon.response.503.GET.hello")).isNotNull();
+        assertThat(metricRegistry.getTimers().get("zmon.backend[http:.localhost:9999.something].DELETE.204"))
+            .isNotNull();
 
-        String metricsEndpointResponse = restTemplate.getForObject("http://localhost:" + port + "/metrics",
+        String metricsEndpointResponse = externalClient.getForObject("http://localhost:" + port + "/metrics",
                 String.class);
 
         logger.info(metricsEndpointResponse);
+    }
+
+    private void expectDeleteCall() {
+        WireMock.addRequestProcessingDelay(200);
+        stubFor(delete(urlEqualTo("/something")).willReturn(
+                aResponse().withStatus(HttpStatus.NO_CONTENT.value()).withFixedDelay(100)));
     }
 
     @Configuration
     public static class BackendIntegratedConfiguration {
 
         @Bean
-        public RestTemplate timeConsumingBackendCallingBean() { }
-
+        public RestTemplate backendCallingBean() {
+            return new RestTemplate();
+        }
     }
 
 }

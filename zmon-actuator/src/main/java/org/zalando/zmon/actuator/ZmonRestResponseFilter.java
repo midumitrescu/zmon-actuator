@@ -1,6 +1,44 @@
 package org.zalando.zmon.actuator;
 
-/**
- * Created by mdumitrescu on 11/13/15.
- */
-public class ZmonRestResponseFilter { }
+import java.io.IOException;
+
+import java.util.concurrent.TimeUnit;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
+import org.springframework.http.HttpRequest;
+import org.springframework.http.client.ClientHttpRequestExecution;
+import org.springframework.http.client.ClientHttpRequestInterceptor;
+import org.springframework.http.client.ClientHttpResponse;
+
+import org.springframework.stereotype.Component;
+
+import org.zalando.zmon.actuator.metrics.MetricsWrapper;
+
+import com.google.common.base.Stopwatch;
+
+@Component
+public class ZmonRestResponseFilter implements ClientHttpRequestInterceptor {
+
+    private final MetricsWrapper metricsWrapper;
+
+    @Autowired
+    public ZmonRestResponseFilter(final MetricsWrapper metricsWrapper) {
+        this.metricsWrapper = metricsWrapper;
+    }
+
+    @Override
+    public ClientHttpResponse intercept(final HttpRequest request, final byte[] body,
+            final ClientHttpRequestExecution execution) throws IOException {
+
+        Stopwatch stopwatch = Stopwatch.createStarted();
+        ClientHttpResponse response = execution.execute(request, body);
+        stopwatch.stop();
+
+        metricsWrapper.recordBackendRoundTripMetrics(request, response, stopwatch);
+
+        System.out.println("Total round trip time was " + stopwatch.elapsed(TimeUnit.MILLISECONDS));
+
+        return response;
+    }
+}
