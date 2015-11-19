@@ -2,8 +2,6 @@ package org.zalando.zmon.actuator;
 
 import java.io.IOException;
 
-import java.util.concurrent.TimeUnit;
-
 import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.http.HttpRequest;
@@ -36,9 +34,6 @@ public class ZmonRestResponseFilter implements ClientHttpRequestInterceptor {
         stopwatch.stop();
 
         metricsWrapper.recordBackendRoundTripMetrics(request, response, stopwatch);
-
-        System.out.println("Total round trip time was " + stopwatch.elapsed(TimeUnit.MILLISECONDS));
-
         return response;
     }
 }
