@@ -17,24 +17,24 @@ package org.zalando.zmon.boot.jetty.config;
 
 import javax.annotation.PostConstruct;
 
-import org.glassfish.jersey.server.ResourceConfig;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
+
 import org.zalando.zmon.boot.jetty.resources.SimpleResource;
+import org.zalando.zmon.jaxrs.jersey.BaseJerseyConfig;
 import org.zalando.zmon.jaxrs.jersey.BestMatchingPatternFilter;
 
 /**
- * 
- * @author jbellmann
+ * Auto-Registration of {@link BestMatchingPatternFilter}.<br/>
  *
+ * @author  jbellmann
  */
 @Configuration
-public class JerseyConfig extends ResourceConfig {
+@Profile("!example2")
+public class JerseyConfig extends BaseJerseyConfig {
 
-	@PostConstruct
-	public void init() {
-		register(SimpleResource.class);
-		// when spring-boot 1.3.0 is released
-		// this can be done also via 'BaseJerseyConfig'
-		register(new BestMatchingPatternFilter("/api"));
-	}
+    @PostConstruct
+    public void init() {
+        register(SimpleResource.class);
+    }
 }
