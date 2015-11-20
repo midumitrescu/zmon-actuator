@@ -30,13 +30,15 @@ public class BaseJerseyConfig extends ResourceConfig {
 	@Autowired
 	private JerseyProperties jerseyProperties;
 
-	public BaseJerseyConfig() {
-	}
+    public BaseJerseyConfig() { }
 
-	@PostConstruct
-	public void init() {
-		// wait until 1.3.0 released
-//		register(new BestMatchingPatternFilter(jerseyProperties.getApplicationPath()));
-	}
+    @PostConstruct
+    public void registerBestMatchingPatternFilter() {
+        register(new BestMatchingPatternFilter(getJerseyProperties().getApplicationPath()));
+    }
+
+    protected JerseyProperties getJerseyProperties() {
+        return this.jerseyProperties;
+    }
 
 }

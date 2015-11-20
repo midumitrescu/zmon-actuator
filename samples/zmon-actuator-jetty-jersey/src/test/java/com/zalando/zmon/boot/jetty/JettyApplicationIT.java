@@ -15,8 +15,6 @@
  */
 package com.zalando.zmon.boot.jetty;
 
-import java.util.concurrent.TimeUnit;
-
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -30,23 +28,22 @@ import org.springframework.web.client.RestTemplate;
 import org.zalando.zmon.boot.jetty.JettyApplication;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-@SpringApplicationConfiguration(classes = { JettyApplication.class })
+@SpringApplicationConfiguration(classes = {JettyApplication.class})
 @WebIntegrationTest
 public class JettyApplicationIT {
 
-	@Value("${local.server.port}")
-	private int port;
+    @Value("${local.server.port}")
+    private int port;
 
-	@Test
-	public void run() throws InterruptedException {
-		RestTemplate rest = new RestTemplate();
-		for (int i = 0; i < 100; i++) {
-			ResponseEntity<String> response = rest
-					.getForEntity("http://localhost:" + port + "/simple/" + i + "/complex", String.class);
-			Assertions.assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-		}
+    @Test
+    public void run() throws InterruptedException {
+        RestTemplate rest = new RestTemplate();
+        for (int i = 0; i < 100; i++) {
+            ResponseEntity<String> response = rest.getForEntity("http://localhost:" + port + "/simple/" + i
+                        + "/complex", String.class);
+            Assertions.assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        }
 
-//		TimeUnit.MINUTES.sleep(2);
-	}
+    }
 
 }
